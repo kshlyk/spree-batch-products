@@ -91,7 +91,7 @@ class Spree::ProductDatasheet < ActiveRecord::Base
           
           self.touched_product_ids += products.map(&:id)
         elsif Spree::Variant.column_names.include?(headers[0])
-          variant = Spree::Variant.where(key => value).first
+          variant = Spree::Variant.where(headers[0] => lookup_value).first
           
           if variant.present? && !variant.is_master
             update_variant(variant, attr_hash)
