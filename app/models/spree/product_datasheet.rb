@@ -91,10 +91,16 @@ class Spree::ProductDatasheet < ActiveRecord::Base
           
           self.touched_product_ids += products.map(&:id)
         elsif Spree::Variant.column_names.include?(headers[0])
-          products = find_products_by_variant headers[0], lookup_value
-          update_products(products, attr_hash)
+          variant = Spree::Variant.where(key => value).first
           
-          self.touched_product_ids += products.map(&:id)
+          if variant.present? && !variant.is_master
+            update_variant(variant, attr_hash)
+          else
+            products = find_products_by_variant headers[0], lookup_value
+            update_products(products, attr_hash)
+            
+            self.touched_product_ids += products.map(&:id)
+          end
         else
           @queries_failed = @queries_failed + 1
         end
@@ -141,6 +147,16 @@ class Spree::ProductDatasheet < ActiveRecord::Base
     end
   end
   
+  def update_variant(variant, attr_hash)
+    begin
+      if variant.update_attributes! attr_hash
+        @records_updated += 1
+      end
+    rescue ActiveRecord::RecordNotSaved, ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+      @records_failed += 1
+    end
+  end
+
   def update_products(products, attr_hash)
     products.each do |product|
       begin
